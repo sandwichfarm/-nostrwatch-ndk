@@ -19,7 +19,9 @@
   "license": "ISC",
   "dependencies": {
     "@nostr-dev-kit/ndk": "file:.yalc/@nostr-dev-kit/ndk",
-    "import2": "1.0.3"
+    "@nostr-fetch/adapter-ndk": "0.15.1",
+    "import2": "1.0.3",
+    "nostr-fetch": "0.15.1"
   },
   "devDependencies": {
     "@types/node": "20.14.8",
