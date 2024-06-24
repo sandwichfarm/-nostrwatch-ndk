@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "lib": ["es2019", "dom"],
+    "outDir": "./dist",
+    "module": "NodeNext",
+    "target": "ESNext",
+    "declaration": true,
+    "esModuleInterop": true,
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]  // Add this line
+  },
+  "include": ["src/**/*"],
+  "exclude": ["./dist", "**/*.test.ts", "./node_modules", "docs"]
+}
