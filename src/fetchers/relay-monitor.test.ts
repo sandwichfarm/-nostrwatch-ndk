@@ -2,15 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 
 import NDK from '@nostr-dev-kit/ndk';
 import type { NDKEvent, NostrEvent } from '@nostr-dev-kit/ndk';
-import { RelayMonitor } from './relay-monitor';
+import { RelayMonitor } from './relay-monitor.js';
 // import type { RelayMonitorSet, RelayMetaSet, RelayDiscoveryResult } from './relay-monitor';
 import { RelayDiscovery } from './relay-discovery.js';
 
 import { RelayMeta } from './relay-meta.js';
 import { NDKKind } from '@nostr-dev-kit/ndk';
 import type { NDKFilter } from '@nostr-dev-kit/ndk';
-
-// const MONITOR_PUBKEY = "abcde937081142db0d50d29bf92792d4ee9b3d79a83c483453171a6004711832";
 
 const EVENT_10166 = {"id":"dcc56a6b1b38ab4372bb95a9095a16406f501ae6abb17763a31bc2c4a33f2964","kind":10166,"pubkey":"abcde937081142db0d50d29bf92792d4ee9b3d79a83c483453171a6004711832","created_at":1710936428,"content":"","tags":[["frequency","3600"],["o","9bbabc5e36297b6f7d15dd21b90ef85b2f1cb80e15c37fcc0c7f6c05acfd0019"],["k","30066"],["k","30166"],["c","open"],["c","read"],["c","write"],["c","info"],["c","dns"],["c","geo"],["c","ssl"],["timeout","open","30000"],["timeout","read","30000"],["timeout","write","30000"],["G","geohash"],["g","u0yjjee20","geohash"],["g","u0yjjee2","geohash"],["g","u0yjjee","geohash"],["g","u0yjje","geohash"],["g","u0yjj","geohash"],["g","u0yj","geohash"],["g","u0y","geohash"],["g","u0","geohash"],["g","u","geohash"],["G","countryCode"],["g","DE","countryCode"],["g","DEU","countryCode"],["G","countryName"],["g","Germany","countryName"],["G","cityName"],["g","Frankfurt am Main","cityName"]],"sig":"fabe5d4019e8bc4f9c9940bccc13fe07cae5eeb3fb3d03dd11756e35871558cf301c053a71db7f5828a7f41b3479514b6ca7cea658159db3eae7a3544db89f36"};
 const EVENT_30166_A: NostrEvent = {"id":"0b44170d80ae592345f87f49b466d2f3391f53f4bb954e0cf95a65eae9242281","kind":30166,"pubkey":"abcde937081142db0d50d29bf92792d4ee9b3d79a83c483453171a6004711832","created_at":1709611188,"content":"","tags":[["d","wss://relay.weloveit.info/"],["n","clearnet"],["N","0"],["N","1"],["N","2"],["N","3"],["N","4"],["N","5"],["N","6"],["N","7"],["N","8"],["N","9"],["N","10"],["N","11"],["R","!auth"],["R","!payment"],["s","git+https://github.com/hoytech/strfry.git"],["G","geohash"],["g","u1422u57b","geohash"],["g","u1422u57","geohash"],["g","u1422u5","geohash"],["g","u1422u","geohash"],["g","u1422","geohash"],["g","u142","geohash"],["g","u14","geohash"],["g","u1","geohash"],["g","u","geohash"],["G","countryCode"],["g","FR","countryCode"],["g","FRA","countryCode"],["G","countryName"],["g","France","countryName"],["G","regionCode"],["g","FR-HDF","regionCode"]],"sig":"531e6339e1a5df2761f5e9eb0c12d6b0aa9273c522aba3ab164dcbe802d53e553acf454f5790932ebaa87004b02aee45d10354e9fda153f5f539f98211c38975"};
