@@ -1,4 +1,4 @@
-import { RelayMonitorFetcher as LocalRelayMonitor } from './fetchers/relay-monitor';
+import { MonitorRelayFetcher as LocalRelayMonitor } from './relay-fetcher';
 import { RelayMonitor as NDKRelayMonitor } from '@nostr-dev-kit/ndk';
 
 export type CombinedRelayMonitor = LocalRelayMonitor | NDKRelayMonitor;

@@ -42,7 +42,7 @@ export class RelayCacheDefault implements RelayCache {
     async load( relayEvents: RelayMetaSet ): Promise<void> {
         relayEvents?.forEach( event => {
             this._events.set( event.pubkey, event as RelayMeta );
-        })
+        });
     }
 
     async dump(): Promise<RelayMetaSet> {

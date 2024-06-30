@@ -2,14 +2,14 @@
   "compilerOptions": {
     "lib": ["es2019", "dom"],
     "outDir": "./dist",
-    "module": "NodeNext",
-    "target": "ESNext",
+    "module": "commonjs",
+    "target": "es6",
     "declaration": true,
     "esModuleInterop": true,
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "node",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node"]  // Add this line
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["./dist", "**/*.test.ts", "./node_modules", "docs"]

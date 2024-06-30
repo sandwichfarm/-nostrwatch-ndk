@@ -6,30 +6,18 @@ import type { NDKFilter } from '@nostr-dev-kit/ndk';
 import { NDKEventGeoCoded as EventGeoCoded, RelayMeta } from '@nostr-dev-kit/ndk';
 import type { Coords } from '@nostr-dev-kit/ndk';
 
-import { RelayMonitorDiscoveryTags } from './relay-monitor';
-import type { RelayMonitorSet, RelayMonitorFetcher as RelayMonitor, RelayListSet, RelayMonitorDiscoveryFilters, RelayMonitorCriterias } from './relay-monitor';
+import { MonitorRelayFetcher, RelayMonitorDiscoveryTags } from './relay-fetcher';
+import type { RelayMonitorSet, RelayListSet, RelayMonitorDiscoveryFilters, RelayMonitorCriterias } from './relay-fetcher';
 
-import { MonitorCache, MonitorCacheDefault } from '../cache/index';
+import { MonitorCacheInterface, MonitorCacheDefault } from './cache/index';
 
-type RelayMonitorsOptions = {
-    customFilter?: NDKFilter;
-    builtinFilter?: RelayMonitorDiscoveryFilters;
-    criterias?: RelayMonitorCriterias;
-    nearby?: EventGeoCodedGeospatialOptions;
-    activeOnly?: boolean;
-    cache?: MonitorCache;
-}
+import { MonitorFetcher, MonitorFetcherOptions } from './monitor-fetcher';
 
-type EventGeoCodedGeospatialOptions = {
-    geohash: string;
-    maxPrecision?: number;
-    minPrecision?: number;
-    minResults?: number;
-    recurse?: boolean;
+const MonitorFetcherOptionsDefaults: MonitorFetcherOptions = {
+    activeOnly: true
 }
 
 type RelayAggregateMixed = RelayListSet | Set<RelayMeta> | undefined;
-
 
 /**
  * 
@@ -37,16 +25,15 @@ type RelayAggregateMixed = RelayListSet | Set<RelayMeta> | undefined;
  * await monitors.populate()
  * monitors.
  */
-export class RelayMonitors {
+export class MonitorManager {
 
     private _ndk: NDK;
-    private _options: RelayMonitorsOptions;
-    private _cache: MonitorCache;
+    private _fetcher: MonitorFetcher;
+    private _cache: MonitorCacheInterface;
 
-    constructor( ndk: NDK, options?: RelayMonitorsOptions ){
+    constructor( ndk: NDK, cache: MonitorCacheInterface, fetcherOptions: MonitorFetcherOptions = MonitorFetcherOptionsDefaults ){
         this._ndk = ndk;
-        // this._events = new Set();
-        this._options = options || {} as RelayMonitorsOptions;
+        this._fetcher = new MonitorFetcher(this.ndk, fetcherOptions || {} as MonitorFetcherOptions)
         this._cache = new MonitorCacheDefault();
     }
 
@@ -54,19 +41,23 @@ export class RelayMonitors {
         return this._ndk;
     }
 
-    get options(): RelayMonitorsOptions {
-        return this._options;
+    get fetch(): MonitorFetcher {
+        return this._fetcher;
     }
 
-    set options( options: RelayMonitorsOptions ) {
-        this._options = options;
+    get fetchOptions(): MonitorFetcherOptions {
+        return this.fetch.options;
     }
 
-    get cache(): MonitorCache {
+    set fetchrOptions( options: MonitorFetcherOptions ) {
+        this.fetch.options = options;
+    }
+
+    get cache(): MonitorCacheInterface {
         return this._cache;
     }
 
-    set cache( cache: MonitorCache ) {
+    set cache( cache: MonitorCacheInterface ) {
         this._cache = cache;
     }
 
@@ -74,7 +65,7 @@ export class RelayMonitors {
         this.cache.reset();
     }
 
-    getMonitor( key: string ): Promise<RelayMonitor | undefined> {
+    getMonitor( key: string ): Promise<MonitorRelayFetcher | undefined> {
         return this.cache.get( key );
     }
 
@@ -83,7 +74,8 @@ export class RelayMonitors {
         this.cache.load( monitors );
     }
 
-    set monitor( monitor: RelayMonitor ) {
+    set monitor( monitor: MonitorRelayFetcher ) {
+        const pubkey = monitor.pubkey;
         this.cache.set( monitor );
     }
 
@@ -97,6 +89,7 @@ export class RelayMonitors {
 
     set monitors( monitors: RelayMonitorSet) {
         if(!monitors?.size) return;
+        this.cache.reset();
         this.cache.load( monitors )
     }
 
@@ -109,17 +102,18 @@ export class RelayMonitors {
      * @param opts - Optional parameters including custom filters, criteria for monitor selection, and geospatial options for nearby search.
      * @returns A promise that resolves to a mixed set of relay data based on the specified aggregation method.
      * 
+     * @todo fetchAggregate -> enum
      * @public
      * @async
      */
-    async aggregate(fetchAggregate: string, opts?: RelayMonitorsOptions): Promise<RelayAggregateMixed | undefined> {
+    async aggregate(fetchAggregate: string, opts?: MonitorFetcherOptions): Promise<RelayAggregateMixed | undefined> {
         const promises: Promise<RelayAggregateMixed>[] = [];
-        const criterias = opts?.criterias || this.options?.criterias as RelayMonitorCriterias || undefined;
+        const criterias = opts?.criterias || this.fetch.options?.criterias as RelayMonitorCriterias || undefined;
         const monitors: RelayMonitorSet = criterias ? await this.meetsCriterias(criterias) : await this.cache.dump();
     
         if (!monitors || monitors.size === 0) return undefined;
     
-        monitors.forEach( (monitor: RelayMonitor) => {
+        monitors.forEach( (monitor: MonitorRelayFetcher) => {
             let result: Promise<RelayAggregateMixed> = Promise.resolve(undefined);
             switch (fetchAggregate) {
                 case 'onlineList':
@@ -222,7 +216,7 @@ export class RelayMonitors {
     public async meetsCriterias( criterias: RelayMonitorCriterias ): Promise<RelayMonitorSet| undefined> {
         let monitors = await this.cache.dump()
         if(!monitors?.size) return undefined;
-        return new Set(Array.from(monitors).filter( (monitor: RelayMonitor) => monitor.meetsCriterias(criterias) ));
+        return new Set(Array.from(monitors).filter( (monitor: MonitorRelayFetcher) => monitor.meetsCriterias(criterias) ));
     }
 
     /**
@@ -236,141 +230,23 @@ export class RelayMonitors {
      * @public
      * @async
      */
-    public async getClosestMonitor( coords: Coords, criterias?: RelayMonitorCriterias, populate: boolean = false ): Promise<RelayMonitor | undefined> {
-        const _criterias = criterias || this.options?.criterias || {} as RelayMonitorCriterias;
+    public async getClosestMonitor( coords: Coords, criterias?: RelayMonitorCriterias, populate: boolean = false ): Promise<MonitorRelayFetcher | undefined> {
+        const _criterias = criterias || this.fetch.options?.criterias || {} as RelayMonitorCriterias;
         let monitors = await this.monitors
         if(!monitors?.size || populate) {
-            await this.populateByCriterias( criterias || this?._options?.criterias as RelayMonitorCriterias);
+            await this.populateByCriterias( criterias || this?.fetch.options?.criterias as RelayMonitorCriterias);
         }
         monitors = await this.meetsCriterias(_criterias);
         if(!monitors?.size) return undefined;
-        const sorted: RelayMonitorSet = RelayMonitors.sortMonitorsByProximity(coords, monitors);
+        const sorted: RelayMonitorSet = MonitorManager.sortMonitorsByProximity(coords, monitors);
         return sorted?.values().next().value;
     };
-
-    /**
-     * @description Fetches monitors with optional filter
-     * 
-     * @param {NDKFilter} filter The NDK instance to use for fetching events.
-     * @param {boolean} activeOnly Return only active monitors.
-     * @returns Promise resolves to an array of `RelayListSet` objects.
-     * 
-     * @public
-     * @async
-     */
-    public async fetchMonitors( filter?: NDKFilter, activeOnly: boolean = true ): Promise<RelayMonitorSet> {
-        if(!this.ndk){
-            return undefined;
-        }
-        
-        const kinds: NDKKind[] = [ NDKKind.RelayMonitor ];
-        const _filter: NDKFilter = { ...filter, kinds };
-        const events: RelayMonitorSet = await this.ndk.fetchEvents(_filter) as RelayMonitorSet;
-
-        if(!events?.size) {
-            return undefined;
-        }
-        if(activeOnly){
-            return RelayMonitors.filterActiveMonitors(events);
-        }
-        return events;
-    }
-
-    /**
-     * @description Fetches monitors by a MonitorTag
-     * 
-     * @param {RelayMonitorSet} monitors A set of `RelayMonitor` objects to filter.
-     * @returns Promise resolves to an array of `RelayListSet` objects.
-     * 
-     * @public
-     * @async
-     */
-    public async fetchMonitorsBy( monitorTags: RelayMonitorDiscoveryFilters, filter?: NDKFilter ): Promise<RelayMonitorSet> {
-        const _filter: NDKFilter = { ...filter, ...monitorTags };
-        const events: RelayMonitorSet = await this.fetchMonitors(_filter);
-        return new Set(events) as RelayMonitorSet;
-    }
-
-    /**
-     * @description Fetches monitors and sorts by distance with a given geohash
-     * 
-     * @param {NDK} ndk The NDK instance to use for fetching events.
-     * @param {NDKFilter} filter An optional, additional filter to ammend to the default filter.
-     * @returns Promise resolves to an array of `RelayListSet` objects.
-     * 
-     * @public
-     * @async
-     */
-    public async fetchActiveMonitors( filter?: NDKFilter ): Promise<RelayMonitorSet> {
-        if(!this.ndk){
-            return undefined;
-        }
-        const events: RelayMonitorSet = await this.fetchMonitors(filter);
-        if(!events?.size) return undefined;
-        const active = await RelayMonitors.filterActiveMonitors( events );
-        return active?.size? active: undefined;
-    }
-
-    /**
-     * @description Fetches monitors and sorts by distance with a given geohash
-     * 
-     * @param {string} geohash The geohash that represents the location to search for relays.
-     * @param {number} maxPrecision The maximum precision of the geohash to search for.
-     * @param {number} minPrecision The minimum precision of the geohash to search for.
-     * @param {number} minResults The minimum number of results to return.
-     * @param {boolean} recurse Recusively search for relays until results  >= minResults
-     * @param {boolean} activeOnly Filter out inactive monitors.
-     * @param {NDKFilter} filter An optional, additional filter to ammend to the default filter. 
-     * @returns Promise resolves to an array of `RelayListSet` objects.
-     * 
-     * @public
-     * @async
-     */
-    public async fetchNearbyMonitors( geohash: string, maxPrecision: number = 5, minPrecision: number = 5, minResults: number = 5, recurse: boolean = false, activeOnly: boolean = false, filter?: NDKFilter ): Promise<RelayMonitorSet> {
-        if(!this.ndk){
-            return undefined;
-        }
-        let cb = async (evs: Set<EventGeoCoded>) => evs;
-        if(activeOnly){
-            cb = async (events: Set<EventGeoCoded>) => await RelayMonitors.filterActiveMonitors(events as RelayMonitorSet) || new Set();
-        }
-        const kinds: NDKKind[] = [ NDKKind.RelayMonitor ];
-        const _filter: NDKFilter = { ...filter, kinds };
-        const geocodedEvents = await EventGeoCoded.fetchNearby(this.ndk, geohash, _filter, { maxPrecision, minPrecision, minResults, recurse, callbackFilter: cb });
-        const events: RelayMonitorSet= new Set(Array.from(geocodedEvents || new Set()).map( (event: EventGeoCoded) => (event as RelayMonitor) ));
-        return events;
-    }
-
-    /**
-     * @description Filters monitors by their active state
-     * 
-     * @param {RelayMonitorSet} monitors A set of `RelayMonitor` objects to filter.
-     * @returns Promise resolves to an array of `RelayListSet` objects.
-     * 
-     * @public
-     * @async
-     */
-    static async filterActiveMonitors( monitors: RelayMonitorSet): Promise<RelayMonitorSet> {
-        if(!monitors?.size) return undefined;
-        const _monitors: RelayMonitorSet = new Set(Array.from(monitors)); //deref
-        const promises = [];
-        for ( const $monitor of _monitors) {
-            promises.push($monitor.isMonitorActive());  
-        }
-        await Promise.allSettled(promises); 
-        _monitors.forEach( ($monitor: RelayMonitor)  => {
-            if(!$monitor.active) {
-                _monitors.delete($monitor);
-            }
-        });
-        return new Set(_monitors) as RelayMonitorSet;
-    }
 
     /**
      * @description Sorts monitors based on provided coordinates (DD or geohash) relative to the monitor's coordinates (if available)
      * 
      * @param {Coords} coords The coordinates to use for sorting.
-     * @param {RelayMonitorSet} monitors A set of `RelayMonitor` objects to filter.
+     * @param {RelayMonitorSet} monitors A set of `MonitorRelayFetcher` objects to filter.
      * @returns Promise resolves to an array of `RelayListSet` objects.
      * 
      * @static
@@ -396,7 +272,7 @@ export class RelayMonitors {
         let monitors = await this.monitors
         if(!monitors?.size) return;
         monitors = await this.cache.dump()
-        monitors?.forEach( async (monitor: RelayMonitor) => {
+        monitors?.forEach( async (monitor: MonitorRelayFetcher) => {
             if(!monitor.initialized){
                 promises.push(monitor.init());
             }
@@ -418,11 +294,10 @@ export class RelayMonitors {
      */
     private _generateCriteriasFilter( criterias?: RelayMonitorCriterias ): RelayMonitorDiscoveryFilters {
         const filter: RelayMonitorDiscoveryFilters = {};
-        criterias = criterias || this.options?.criterias;
+        criterias = criterias || this.fetch.options?.criterias;
         if (!criterias) return filter;
         const keyMapping: Record<keyof RelayMonitorCriterias, RelayMonitorDiscoveryTags> = {
             kinds: RelayMonitorDiscoveryTags.kinds,
-            operator: RelayMonitorDiscoveryTags.operator, 
             checks: RelayMonitorDiscoveryTags.checks,
         };
         Object.entries(keyMapping).forEach(([optionKey, tagValue]) => {

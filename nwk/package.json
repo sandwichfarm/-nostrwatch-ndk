@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "NDK extension for NIP-66 relay discoverability",
   "main": "index.ts",
+  "type": "module",
   "scripts": {
     "build": "tsc",
     "test": "vitest",
@@ -11,7 +12,7 @@
     "dev": "tsc-watch --onSuccess 'node dist/app.js'",
     "lint": "eslint . --ext .ts",
     "coverage": "vitest run --reporter=junit --coverage.reporter=json-summary --coverage.enabled=true",
-    "docs": "tsdoc",
+    "docs": "npx typedoc src/index.ts --out ./docs --ignoreCompilerErrors --plugin typedoc-plugin-ensure-internal",
     "serve-docs": "http-server ./docs"
   },
   "keywords": [],
@@ -30,6 +31,7 @@
     "http-server": "14.1.1",
     "tsdoc": "0.0.4",
     "typedoc": "0.26.2",
+    "typedoc-plugin-ensure-internal": "https://github.com/deap82/typedoc-plugin-ensure-internal",
     "typescript": "5.5.2",
     "vite": "5.3.1",
     "vite-tsconfig-paths": "4.3.2",

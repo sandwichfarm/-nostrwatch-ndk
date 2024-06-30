@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 
 import NDK from '@nostr-dev-kit/ndk';
 import type { NDKEvent, NostrEvent } from '@nostr-dev-kit/ndk';
-import { RelayMonitor } from './relay-monitor.js';
+import { MonitorRelayFetcher } from './relay-monitor.js';
 // import type { RelayMonitorSet, RelayMetaSet, RelayDiscoveryResult } from './relay-monitor';
 import { RelayDiscovery } from './relay-discovery.js';
 
@@ -41,9 +41,9 @@ export const testEvents = [ ...testEventsMeta, ...testEventsDiscovery ];
 
 const explicitRelayUrls = ["wss://history.nostr.watch", "wss://purplepag.es"];
 
-describe('RelayMonitor', () => {
+describe('MonitorRelayFetcher', () => {
 
-  let relayMonitor: RelayMonitor;
+  let MonitorRelayFetcher: MonitorRelayFetcher;
   const ndk = new NDK({ explicitRelayUrls });
   [ NDKEVENT_30066_1 , NDKEVENT_30066_2 ]  = setupMetaEvents(ndk);
   [ NDKEVENT_30166_1, NDKEVENT_30166_2 ] = setupDiscoveryEvents(ndk);
@@ -53,24 +53,24 @@ describe('RelayMonitor', () => {
   const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
   beforeEach(() => {
-    relayMonitor = new RelayMonitor(ndk, EVENT_10166);
+    MonitorRelayFetcher = new MonitorRelayFetcher(ndk, EVENT_10166);
   });
 
   describe('getters', ()=>{
     it('should get pubkey', () => {
-      expect(relayMonitor.pubkey).toBe("abcde937081142db0d50d29bf92792d4ee9b3d79a83c483453171a6004711832");
+      expect(MonitorRelayFetcher.pubkey).toBe("abcde937081142db0d50d29bf92792d4ee9b3d79a83c483453171a6004711832");
     });
 
     it('should get frequency', () => {
-      expect(relayMonitor.frequency).toBe(3600);
+      expect(MonitorRelayFetcher.frequency).toBe(3600);
     });
 
     it('should get operator', () => {
-      expect(relayMonitor.owner).toBe("9bbabc5e36297b6f7d15dd21b90ef85b2f1cb80e15c37fcc0c7f6c05acfd0019");
+      expect(MonitorRelayFetcher.owner).toBe("9bbabc5e36297b6f7d15dd21b90ef85b2f1cb80e15c37fcc0c7f6c05acfd0019");
     });
 
     it('should get timeouts', () => {
-      expect(relayMonitor.timeout).toEqual({
+      expect(MonitorRelayFetcher.timeout).toEqual({
         open: 30000,
         read: 30000,
         write: 30000
@@ -78,31 +78,31 @@ describe('RelayMonitor', () => {
     });
 
     it('should get kinds', () => {
-      expect(relayMonitor.kinds).toContain(NDKKind.RelayMeta);
-      expect(relayMonitor.kinds).toContain(NDKKind.RelayDiscovery);
+      expect(MonitorRelayFetcher.kinds).toContain(NDKKind.RelayMeta);
+      expect(MonitorRelayFetcher.kinds).toContain(NDKKind.RelayDiscovery);
     });
 
     // it('should get geo', () => {
-    //   expect(relayMonitor.getGeo()).toEqual( expect.arrayContaining([["g", "u0yjjee20", "geohash"]]));
+    //   expect(MonitorRelayFetcher.getGeo()).toEqual( expect.arrayContaining([["g", "u0yjjee20", "geohash"]]));
     // });
 
   });
 
   describe('setters', ()=>{
     it('should set pubkey', () => {
-      expect(relayMonitor.pubkey).toBe("abcde937081142db0d50d29bf92792d4ee9b3d79a83c483453171a6004711832");
+      expect(MonitorRelayFetcher.pubkey).toBe("abcde937081142db0d50d29bf92792d4ee9b3d79a83c483453171a6004711832");
     });
   
     it('should set and get frequency correctly', () => {
-      expect(relayMonitor.frequency).toBe(3600);
+      expect(MonitorRelayFetcher.frequency).toBe(3600);
     });
   
     it('should set operator correctly', () => {
-      expect(relayMonitor.owner).toBe("9bbabc5e36297b6f7d15dd21b90ef85b2f1cb80e15c37fcc0c7f6c05acfd0019");
+      expect(MonitorRelayFetcher.owner).toBe("9bbabc5e36297b6f7d15dd21b90ef85b2f1cb80e15c37fcc0c7f6c05acfd0019");
     });
   
     it('should set timeouts correctly', () => {
-      expect(relayMonitor.timeout).toEqual({
+      expect(MonitorRelayFetcher.timeout).toEqual({
         open: 30000,
         read: 30000,
         write: 30000
@@ -110,21 +110,21 @@ describe('RelayMonitor', () => {
     });
   
     it('should set kinds correctly', () => {
-      // relayMonitor.kinds = [NDKKind.RelayMeta, NDKKind.RelayDiscovery];
-      expect(relayMonitor.kinds).toContain(NDKKind.RelayMeta);
-      expect(relayMonitor.kinds).toContain(NDKKind.RelayDiscovery);
+      // MonitorRelayFetcher.kinds = [NDKKind.RelayMeta, NDKKind.RelayDiscovery];
+      expect(MonitorRelayFetcher.kinds).toContain(NDKKind.RelayMeta);
+      expect(MonitorRelayFetcher.kinds).toContain(NDKKind.RelayDiscovery);
     });
   
     // it('should set timeouts correctly', () => {
-    //   expect(relayMonitor.getGeo()).toEqual( expect.arrayContaining([["g", "u0yjjee20", "geohash"]]));
+    //   expect(MonitorRelayFetcher.getGeo()).toEqual( expect.arrayContaining([["g", "u0yjjee20", "geohash"]]));
     // });
   });
 
   describe('@private', () => {
-    let relayMonitor: RelayMonitor;
+    let MonitorRelayFetcher: MonitorRelayFetcher;
   
     beforeEach(() => {
-      relayMonitor = new RelayMonitor(ndk);
+      MonitorRelayFetcher = new MonitorRelayFetcher(ndk);
     });
   
     afterEach(() => {
@@ -133,7 +133,7 @@ describe('RelayMonitor', () => {
 
     describe('reduceRelayEventsToRelayStrings', () => {
       it('should return a relay list', async () => {
-        const result = relayMonitor['_reduceRelayEventsToRelayStrings'](new Set([NDKEVENT_30166_1, NDKEVENT_30166_2]) as Set<NDKEvent>);
+        const result = MonitorRelayFetcher['_reduceRelayEventsToRelayStrings'](new Set([NDKEVENT_30166_1, NDKEVENT_30166_2]) as Set<NDKEvent>);
         expect(result).toBeInstanceOf(Set);
         expect(result).toEqual(new Set(['wss://relay.weloveit.info/', 'wss://africa.nostr.joburg/']));
       });
@@ -141,7 +141,7 @@ describe('RelayMonitor', () => {
 
     describe('invalidRelayFetch', () => {
       it('should return undefined and log error', () => {
-        const result = relayMonitor['_invalidRelayFetch']("testMethod", "testError");
+        const result = MonitorRelayFetcher['_invalidRelayFetch']("testMethod", "testError");
         expect(result).toBeUndefined();
         expect(mockConsoleError).toHaveBeenCalledWith("testMethod: testError");
       });
@@ -149,7 +149,7 @@ describe('RelayMonitor', () => {
 
     describe('nip66Filter', () => {
       it('should generate correct filter based on input kinds', () => {
-        const filter = relayMonitor['_nip66Filter']( [NDKKind.RelayMeta], { limit: 1 }, { "#n": ["clearnet"] } );
+        const filter = MonitorRelayFetcher['_nip66Filter']( [NDKKind.RelayMeta], { limit: 1 }, { "#n": ["clearnet"] } );
         expect(filter).toHaveProperty('kinds', expect.arrayContaining([NDKKind.RelayMeta]));
         expect(filter).toHaveProperty('limit', 1);
         expect(filter).toHaveProperty('#n', expect.arrayContaining(["clearnet"]));
@@ -160,7 +160,7 @@ describe('RelayMonitor', () => {
   describe('@public', () => {
 
     beforeEach(() => {
-      relayMonitor = new RelayMonitor(ndk, EVENT_10166);
+      MonitorRelayFetcher = new MonitorRelayFetcher(ndk, EVENT_10166);
       fetchEventsMock.mockImplementation((filter): Promise<Set<NDKEvent>> => {
         let result: NDKEvent[] = [NDKEVENT_30066_1, NDKEVENT_30066_2, NDKEVENT_30166_1, NDKEVENT_30166_2];
         filter = filter as NDKFilter;
@@ -182,18 +182,18 @@ describe('RelayMonitor', () => {
 
     describe('isMonitorValid',()=>{
       it('should return true when all conditions are met', () => {
-        expect(relayMonitor.isMonitorValid()).toBe(true);
+        expect(MonitorRelayFetcher.isMonitorValid()).toBe(true);
       });
     
       it('should return false when not all conditions are met', () => {
-        relayMonitor.frequency = undefined; 
-        expect(relayMonitor.isMonitorValid()).toBe(false);
+        MonitorRelayFetcher.frequency = undefined; 
+        expect(MonitorRelayFetcher.isMonitorValid()).toBe(false);
       });
     });
 
     describe('fetchOnlineRelays', ()=>{
       it('should return a set of relay events', async () => {
-        const result = await relayMonitor['fetchOnlineRelays']();
+        const result = await MonitorRelayFetcher['fetchOnlineRelays']();
         expect(result).toBeInstanceOf(Set);
         expect(result?.size).toBe(2);
         expect(result).toEqual(new Set(['wss://relay.weloveit.info/', 'wss://africa.nostr.joburg/']));
@@ -201,7 +201,7 @@ describe('RelayMonitor', () => {
   
       it('should return a filtered set of relay events', async () => {
         const filter: NDKFilter = { "#s": ['git+https://github.com/Cameri/nostream.git'] };
-        const result = await relayMonitor.fetchOnlineRelays(filter);
+        const result = await MonitorRelayFetcher.fetchOnlineRelays(filter);
         expect(result).toBeInstanceOf(Set);
         expect(result?.size).toBe(1);
         expect(result).toEqual(new Set(['wss://africa.nostr.joburg/']));
@@ -210,14 +210,14 @@ describe('RelayMonitor', () => {
 
     describe('fetchRelayMeta', ()=>{
       it('should return a RelayMeta[] with length=1 when given one relay', async () => {
-        const result = await relayMonitor.fetchRelayMeta('wss://relay.weloveit.info/');
+        const result = await MonitorRelayFetcher.fetchRelayMeta('wss://relay.weloveit.info/');
         const _result = Array.from(result || []);
         expect(_result?.length).toEqual(1);
         expect(_result?.[0]?.url).toEqual('wss://relay.weloveit.info/');
       });
   
       it('should return a RelayMeta[] with length=2 given two relays', async () => {
-        const result = await relayMonitor.fetchRelayMeta(['wss://relay.plebes.fans/', 'wss://relay.weloveit.info/']);
+        const result = await MonitorRelayFetcher.fetchRelayMeta(['wss://relay.plebes.fans/', 'wss://relay.weloveit.info/']);
         const _result = Array.from(result || []);
         expect(_result?.length).toEqual(2);
         expect(_result?.[0]?.url).toEqual('wss://relay.weloveit.info/');
@@ -227,7 +227,7 @@ describe('RelayMonitor', () => {
     
     describe('fetchOnlineRelaysMeta', ()=>{
       it('should return a set of RelayMeta events', async () => {
-        const result = await relayMonitor.fetchOnlineRelaysMeta();
+        const result = await MonitorRelayFetcher.fetchOnlineRelaysMeta();
         const _result = Array.from(result || []);
         expect(_result?.length).toEqual(2);
         expect(_result?.[0]?.url).toEqual('wss://relay.weloveit.info/');
@@ -238,9 +238,9 @@ describe('RelayMonitor', () => {
 
   describe('@static', () => {
     describe('from', () => {
-      it('should return a RelayMonitor instance', () => {
-        const newRelayMonitor = RelayMonitor.from(NDKEVENT_30066_1);
-        expect(newRelayMonitor).toBeInstanceOf(RelayMonitor);
+      it('should return a MonitorRelayFetcher instance', () => {
+        const newRelayMonitor = MonitorRelayFetcher.from(NDKEVENT_30066_1);
+        expect(newRelayMonitor).toBeInstanceOf(MonitorRelayFetcher);
         expect(newRelayMonitor?.checks).toBeDefined();
       });
     });
